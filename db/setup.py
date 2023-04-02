@@ -14,7 +14,6 @@ def safe_insert(table: str, fields: list[str])-> None:
         reader = csv.DictReader(f, fieldnames=fields)
         for row in reader:
             try:
-                print(row)
                 sentence="INSERT INTO {} ({}) VALUES ({})"\
                         .format(table,
                                 (", ").join(fields),
