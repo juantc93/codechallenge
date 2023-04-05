@@ -1,6 +1,7 @@
 import sqlite3
-
-conn = sqlite3.connect('challenge.db')
+import os
+script_dir=os.path.dirname(os.path.abspath(__file__))
+conn = sqlite3.connect(os.path.join(script_dir,'challenge.db'))
 c = conn.cursor()
 
 for table in ['hired_employees','jobs','departments']:

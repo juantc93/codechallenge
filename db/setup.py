@@ -1,7 +1,9 @@
 import sqlite3
 import csv
+import os
 
-conn = sqlite3.connect('challenge.db')
+script_dir=os.path.dirname(os.path.abspath(__file__))
+conn = sqlite3.connect(os.path.join(script_dir,'challenge.db'))
 c = conn.cursor()
 table_fields_dict={
     'jobs':['id','job'],
@@ -10,7 +12,7 @@ table_fields_dict={
     }
 
 def safe_insert(table: str, fields: list[str])-> None:
-    with open('../csv_source/{}.csv'.format(table), 'r', encoding='utf-8-sig') as f:
+    with open(os.path.join(script_dir,'../csv_source/{}.csv'.format(table)), 'r', encoding='utf-8-sig') as f:
         reader = csv.DictReader(f, fieldnames=fields)
         for row in reader:
             try:
