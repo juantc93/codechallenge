@@ -36,7 +36,7 @@ class Department(BaseModel):
     department: int
 
 class Table(BaseModel):
-    name: str
+    table_name: str
     
 
 def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
@@ -106,7 +106,7 @@ async def create_backup():
 
 @app.post("/restore/")
 async def restore(table: Table):
-    avro_file_path = ("../backup/{}/{}.avro".format(table["name"]))
+    avro_file_path = ("../backup/{}/{}.avro".format(table["table_name"]))
     with open(avro_file_path, "rb") as avro_file:
         records = fastavro.reader(avro_file)
     conn = sqlite3.connect('../db/challenge.db')
