@@ -122,14 +122,14 @@ async def restore(table: Table):
     conn.close()
     return {"message":"{} restored sucessfully".format(table["name"])}
 
-  sentence="INSERT INTO {} ({}) VALUES ({})"\
-                    .format(table,
-                            (", ").join(fields),
-                            (", ").join(["?"]*len(fields))
-                    )
+  #  entence="INSERT INTO {} ({}) VALUES ({})"\
+  #                  .format(table,
+  #                          (", ").join(fields),
+  #                          (", ").join(["?"]*len(fields))
+  #                  )
 
-    for element in payload:
-        element_dict=element.dict()
+  #  for element in payload:
+  #      element_dict=element.dict()
 
-        c.execute(sentence, 
-                  [element_dict[field] for field in fields] )
+  #      c.execute(sentence, 
+#               [element_dict[field] for field in fields] )
