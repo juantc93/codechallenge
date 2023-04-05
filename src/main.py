@@ -16,7 +16,10 @@ VALUES_DICT={
     "jobs":[('id',"int"),('job',"string")],
     "departments":[('id',"int"),('department',"string")]
 }
-
+DEFAULT_VALUE_DICT={
+    "int":0,
+    "string":"NONE"
+}
 class Employee(BaseModel):
     id: int
     name: str
@@ -31,6 +34,10 @@ class Job(BaseModel):
 class Department(BaseModel):
     id: int
     department: int
+
+class Table(BaseModel):
+    name: str
+    
 
 def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
     conn = sqlite3.connect('../db/challenge.db')
@@ -72,15 +79,15 @@ async def create_employees(employees: List[Employee]):
     insert_payload(employees, "hired_employees", [pair[0] for pair in VALUES_DICT["hired_employees"]])
 
 @app.post("/jobs/")
-async def create_employees(employees: List[Employee]):
-    insert_payload(employees, "jobs", [pair[0] for pair in VALUES_DICT["jobs"]])
+async def create_jobs(jobs: List[Job]):
+    insert_payload(jobs, "jobs", [pair[0] for pair in VALUES_DICT["jobs"]])
 
 @app.post("/departments/")
-async def create_employees(employees: List[Employee]):
-    insert_payload(employees, "departments", [pair[0] for pair in VALUES_DICT["departments"]])
+async def create_(departments: List[Department]):
+    insert_payload(departments, "departments", [pair[0] for pair in VALUES_DICT["departments"]])
 
 @app.post("/backup/")
-async def create_employees(employees: List[Employee]):
+async def create_backup():
     conn = sqlite3.connect('../db/challenge.db')
     c = conn.cursor()
 
@@ -92,6 +99,37 @@ async def create_employees(employees: List[Employee]):
             fastavro.writer(f, fastavro.parse_schema({
                 "type": "record",
                 "name": table,
-                "fields": [{"name":pair[0],"type":pair[1],"default":0 if pair[1]=="int" else "NONE"} for pair in VALUES_DICT[table]]
+                "fields": [{"name":pair[0],"type":pair[1],"default":DEFAULT_VALUE_DICT[pair[1]]} for pair in VALUES_DICT[table]]
             }), records)
     conn.close()
+    return {"result":"backup sucessful"}
+
+@app.post("/restore/")
+async def restore(table: Table):
+    avro_file_path = ("../backup/{}/{}.avro".format(table["name"]))
+    with open(avro_file_path, "rb") as avro_file:
+        records = fastavro.reader(avro_file)
+    conn = sqlite3.connect('../db/challenge.db')
+    c = conn.cursor()
+
+    sentence="INSERT INTO {} ({}) VALUES ({})"\
+                    .format(VALUES_DICT[table["name"]], (", ").join(fields), (", ").join(["?"]*len(fields)))
+    for record in records:
+        c.execute(sentence, 
+                  (record['id'], record['name'], record['department_id'], record['job_id']))
+    
+    conn.commit()
+    conn.close()
+    return {"message":"{} restored sucessfully".format(table["name"])}
+
+  sentence="INSERT INTO {} ({}) VALUES ({})"\
+                    .format(table,
+                            (", ").join(fields),
+                            (", ").join(["?"]*len(fields))
+                    )
+
+    for element in payload:
+        element_dict=element.dict()
+
+        c.execute(sentence, 
+                  [element_dict[field] for field in fields] )
