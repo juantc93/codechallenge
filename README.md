@@ -15,10 +15,10 @@ To test if migration was sucessfull please execute, a sample from every table sh
 ## Endpoint
 API code is stored inside the **src** code:
 
-To launch the server for the API, end User must move to *src* run the followind command: 
+To launch the server for the API, end User must move to *src* run the following command: 
 * uvicorn main:app --reload
 
-The api have the following endpoints. 
+The api has the following endpoints. 
 
 ***IMPORTANT***
 

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
@@ -21,23 +21,27 @@ DEFAULT_VALUE_DICT={
     "string":"NONE"
 }
 class Employee(BaseModel):
-    id: int
-    name: str
-    datetime: str
-    department_id: int
-    job_id: int
+    id: Optional[int]
+    name: Optional[str]
+    datetime: Optional[str]
+    department_id: Optional[int]
+    job_id: Optional[int]
 
 class Job(BaseModel):
-    id: int
-    job_id: int
+    id: Optional[int]
+    job: Optional[str]
 
 class Department(BaseModel):
-    id: int
-    department: int
+    id: Optional[int]
+    department: Optional[str]
 
 class Table(BaseModel):
     table_name: str
     
+ASSERTION_DICT={"hired_employees":Employee,
+                 "jobs":Job,
+                 "departments":Department}   
+
 
 def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
     conn = sqlite3.connect('../db/challenge.db')
@@ -52,13 +56,18 @@ def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
                             (", ").join(fields),
                             (", ").join(["?"]*len(fields))
                     )
-
+    model_fields=ASSERTION_DICT[table].__fields__
     for element in payload:
         element_dict=element.dict()
-
-        c.execute(sentence, 
-                  [element_dict[field] for field in fields] )
-        
+        missing_fields=[field for field in model_fields if (element_dict[field] is None)|(element_dict[field] is "")]
+        if len(missing_fields)==0:
+            try:
+                c.execute(sentence, 
+                    [element_dict[field] for field in fields] )
+            except Exception as e:
+                    logging.log(logging.ERROR, "{} on record {}".format(str(e),str(element_dict))) 
+        else:
+            logging.error("MALFORMED RECORD {} - {} fields are missing or empty".format(str(element_dict),(", ").join(missing_fields)))    
 
     conn.commit() 
     conn.close()
@@ -68,9 +77,9 @@ def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    logging.error(exc.errors())
+    logging.warning(exc.errors())
     return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status_code=status.HTTP_201_CREATED,
         content=jsonable_encoder({"detail": exc.errors(), "body": exc.body}),
     )
 
