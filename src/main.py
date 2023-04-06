@@ -59,7 +59,7 @@ def insert_payload(payload: BaseModel, table:str, fields: list[str]) -> None:
     model_fields=ASSERTION_DICT[table].__fields__
     for element in payload:
         element_dict=element.dict()
-        missing_fields=[field for field in model_fields if (element_dict[field] is None)|(element_dict[field] is "")]
+        missing_fields=[field for field in model_fields if (element_dict[field] is None)|(element_dict[field]=="")]
         if len(missing_fields)==0:
             try:
                 c.execute(sentence, 
@@ -103,7 +103,7 @@ async def create_backup():
     for table in VALUES_DICT.keys():
         c.execute("SELECT  * FROM {}".format(table))
         rows = c.fetchall()
-        records = [{VALUES_DICT[table][0]: row[i]} for i in range (len(VALUES_DICT[table])) for row in rows]
+        records = [{VALUES_DICT[table][i][0]: row[i] for i in range (len(VALUES_DICT[table]))} for row in rows]
         with open('../backup/{}/{}.avro'.format(table,table), 'wb') as f:
             fastavro.writer(f, fastavro.parse_schema({
                 "type": "record",
@@ -114,31 +114,26 @@ async def create_backup():
     return {"result":"backup sucessful"}
 
 @app.post("/restore/")
-async def restore(table: Table):
-    avro_file_path = ("../backup/{}/{}.avro".format(table["table_name"]))
-    with open(avro_file_path, "rb") as avro_file:
-        records = fastavro.reader(avro_file)
+def restore(table: Table):
+    
     conn = sqlite3.connect('../db/challenge.db')
     c = conn.cursor()
-
+    fields=[pair[0] for  pair in VALUES_DICT[table.table_name]]
+    print(fields)
     sentence="INSERT INTO {} ({}) VALUES ({})"\
-                    .format(VALUES_DICT[table["name"]], (", ").join(fields), (", ").join(["?"]*len(fields)))
-    for record in records:
-        c.execute(sentence, 
-                  (record['id'], record['name'], record['department_id'], record['job_id']))
+                    .format(table.table_name, (", ").join(fields), (", ").join(["?"]*len(fields)))
+    avro_file_path = ("../backup/{}/{}.avro".format(table.table_name,table.table_name))
+    with open(avro_file_path, "rb") as avro_file:
+        records = fastavro.reader(avro_file)
+        conn.execute("DELETE FROM  {};".format(table.table_name))
+        conn.commit()
+        conn.execute("VACUUM;".format(table.table_name))
+        conn.commit()
+        for record in records:
+            print([record[field] for field in fields])
+            conn.execute(sentence, 
+                    [record[field] for field in fields])
     
     conn.commit()
     conn.close()
-    return {"message":"{} restored sucessfully".format(table["name"])}
-
-  #  entence="INSERT INTO {} ({}) VALUES ({})"\
-  #                  .format(table,
-  #                          (", ").join(fields),
-  #                          (", ").join(["?"]*len(fields))
-  #                  )
-
-  #  for element in payload:
-  #      element_dict=element.dict()
-
-  #      c.execute(sentence, 
-#               [element_dict[field] for field in fields] )
+    return {"message":"{} restored sucessfully".format(table.table_name)}
