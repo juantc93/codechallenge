@@ -1,4 +1,4 @@
 *.db
-*.avro
+
 *.pyc
 /env/
